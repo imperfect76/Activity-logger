@@ -1,5 +1,5 @@
 # Activity logger
-# Logs system start/stop and VS Code start/stop events with timestamps
+# Logs system start/stop and process start/stop events with timestamps
 
 import time
 import psutil
@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 
 LOG_FILE = "activity.txt"
+process_name = "code"
 
 def get_timestamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -19,38 +20,40 @@ def log_event(event):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line)
 
-def vscode_is_running():
+def process_is_running(process_name):
     for proc in psutil.process_iter(['pid', 'name', 'ppid']):
-        if proc.info['name'] == 'code': 
+        if proc.info['name'] == process_name: 
             return True
     return False
 
-def vscode_state_checker(past_state):
-    now_state = vscode_is_running()
+def process_state_checker(past_state):
+    now_state = process_is_running(process_name)
 
     if not past_state and now_state:
-        return "VSCODE_START"
+        return "PROCESS_STARTED"
 
     elif past_state and not now_state:
-        return "VSCODE_STOP"
+        return "PROCESS_STOPPED"
 
     return None
 
 def handle_exit(signum, frame):
-    log_event("COMPUTER_STOP")
+    log_event("LOGGER_STOPPED")
     sys.exit(0)
 
 def main():
-    log_event("COMPUTER_START")
-    vscode_past_state = False
+    log_event("LOGGER_STARTED")
+    if process_is_running(process_name):
+        log_event("PROCESS_RUNNING")
+    process_past_state = process_is_running(process_name)
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
     while True:
-        event = vscode_state_checker(vscode_past_state)
+        event = process_state_checker(process_past_state)
         if event:
             log_event(event)
 
-        vscode_past_state = vscode_is_running()
+        process_past_state = process_is_running(process_name)
         time.sleep(2)
 
 if __name__ == "__main__":
