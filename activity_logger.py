@@ -5,10 +5,15 @@ import time
 import psutil
 import signal
 import sys
+import argparse
+import json
 from datetime import datetime
 
-LOG_FILE = "activity.txt"
-process_name = "code"
+parser = argparse.ArgumentParser(description="Process activity logger")
+parser.add_argument("process", help="Process name for logging")
+args = parser.parse_args()
+LOG_FILE = "activity.json"
+process_name = args.process
 
 def get_timestamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -16,9 +21,10 @@ def get_timestamp():
 def log_event(event):
     if not event:
         return
-    line = f"{get_timestamp()} | {event}\n"
+    line = {"timestamp": get_timestamp(), "event": event, "process": process_name}
+    json_line = json.dumps(line)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line)
+        f.write(json_line + "\n")
 
 def process_is_running(process_name):
     for proc in psutil.process_iter(['pid', 'name', 'ppid']):
